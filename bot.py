@@ -1,21 +1,17 @@
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart
+from aiogram import Bot, Dispatcher
 
+from app.handlers import router
 from config import TOKEN
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-@dp.message(CommandStart())
-async def send_welcome(message: types.Message):
-    await message.answer("Это hr бот.")
-
-
 
 async def main():
+    dp.include_router(router)
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
