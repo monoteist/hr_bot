@@ -3,7 +3,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 
-from app.handlers import router
+from app.handlers.start import router
 from config import TOKEN
 
 bot = Bot(token=TOKEN)
