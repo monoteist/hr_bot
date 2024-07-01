@@ -6,8 +6,8 @@ def start_keyboard():
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Опробовать беспалтно 24 часа",
-                    callback_data='some_text',
+                    text="Опробовать бесплатно 24 часа",
+                    callback_data="start_trial",
                 )
             ],
             [
