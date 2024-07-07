@@ -13,7 +13,7 @@ def start_keyboard():
             [
                 InlineKeyboardButton(
                     text="Купить подписку",
-                    callback_data='some_text',
+                    callback_data="buy_subscription"
                 )
             ],
             [
