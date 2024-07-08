@@ -1,38 +1,27 @@
 from datetime import datetime, timedelta
 
 from aiogram import types, Router, F
-from aiogram.filters import CommandStart
-from sqlalchemy.future import select
 
-from app.keyboards.start import start_keyboard
 from app.database.connect import async_session
 from app.database.models import User
+from app.utils.db import get_user, update_subscription
 from config import YOOKASSA_TEST_TOKEN
-
 
 router = Router()
 
 
-@router.message(CommandStart())
-async def send_welcome(message: types.Message):
-    start_text = (
-        f"Этот бот поможет вам решить любой вопрос по управлению персоналом."
-        f"Здесь возможность создания вакансии, матрица подбора, шаблоны документов, "
-        f"виртуальный ассистент и многое другое."
-        f"До приобретения подписки вы можете опробовать этот бот бесплатно."
-        f"Создатель бота: @мойтелеграмканал"
-    )
-    await message.answer(
-        start_text, reply_markup=start_keyboard()
-    )
-
-
 @router.callback_query(F.data == 'start_trial')
 async def start_trial(callback_query: types.CallbackQuery):
+    """
+    Обработчик для начала бесплатного пробного периода.
+    Предоставляет пользователю один день пробного периода, если он еще не использовал его.
+
+    :param callback_query: Callback query от пользователя.
+    """
     async with async_session() as session:
         async with session.begin():
-            user = await session.execute(select(User).filter_by(user_id=callback_query.from_user.id))
-            user = user.scalars().first()
+            user_id = callback_query.from_user.id
+            user = await get_user(session=session, user_id=user_id)
             if user:
                 if user.has_used_trial:
                     await callback_query.message.answer("Вы уже использовали пробный период.")
@@ -59,8 +48,13 @@ async def start_trial(callback_query: types.CallbackQuery):
 
 @router.callback_query(F.data == 'buy_subscription')
 async def process_callback_buy_subscribe(callback_query: types.CallbackQuery):
+    """
+    Обработчик для покупки подписки. Отправляет пользователю счет на оплату.
+
+    :param callback_query: Callback query от пользователя.
+    """
     # Цена в копейках (490 рублей)
-    prices = [types.LabeledPrice(label="Месячная подписка", amount=49000)]
+    prices = [types.LabeledPrice(label="Месячная подписка", amount=490 * 100)]
     await callback_query.message.answer_invoice(
         title="Подписка на месяц",
         description="Оплатите месячную подписку",
@@ -75,41 +69,26 @@ async def process_callback_buy_subscribe(callback_query: types.CallbackQuery):
 
 @router.pre_checkout_query(lambda query: True)
 async def pre_checkout_query_handler(pre_checkout_query: types.PreCheckoutQuery):
+    """
+    Обработчик предчекового запроса. Подтверждает, что оплата может быть проведена.
+
+    :param pre_checkout_query: Предчековый запрос от пользователя.
+    """
     await pre_checkout_query.bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
 @router.message(F.content_type == types.ContentType.SUCCESSFUL_PAYMENT)
 async def successful_payment_handler(message: types.Message):
+    """
+    Обработчик успешной оплаты. Обновляет дату окончания подписки пользователя.
+
+    :param message: Сообщение, содержащее информацию об успешной оплате.
+    """
     async with async_session() as session:
         async with session.begin():
-            user = await session.execute(select(User).filter_by(user_id=message.from_user.id))
-            user = user.scalars().first()
-            if user:
-                user.subscription_end = datetime.utcnow() + timedelta(days=30)
-            else:
-                new_user = User(
-                    user_id=message.from_user.id,
-                    subscription_end=datetime.utcnow() + timedelta(days=30)
-                )
-                session.add(new_user)
-            await session.commit()
+            await update_subscription(session, message.from_user.id, 30)
     await message.answer(
         f"Поздравляем с приобретением подписки!\n"
         f"Весь функционал вы можете найти в меню бота.\n"
-        f"Удачного и эффективного использования нашего бота!»"
+        f"Удачного и эффективного использования нашего бота!"
     )
-
-
-# async def test(message: types.Message):
-#     async with async_session() as session:
-#         async with session.begin():
-#             user = await session.execute(select(User).filter_by(user_id=message.from_user.id))
-#             user = user.scalars().first()
-#             if user:
-#                 user.subscription_end = datetime.utcnow() + timedelta(days=30)
-#             else:
-#                 new_user = User(user_id=message.from_user.id,
-#                                 subscription_end=datetime.utcnow() + timedelta(days=30))
-#                 session.add(new_user)
-#             await session.commit()
-#     await message.answer("Спасибо за оплату! Ваша подписка активна на 30 дней.")
