@@ -1,1 +1,7 @@
-TOKEN = '1867374791:AAGNRvMJH7xydmFFtNL8_oi8hcNTxr_qGKs'
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+YOOKASSA_TEST_TOKEN = os.getenv("YOOKASSA_TEST_TOKEN")

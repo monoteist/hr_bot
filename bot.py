@@ -5,9 +5,9 @@ from aiogram import Bot, Dispatcher
 
 from app.database.connect import init_db
 from app.handlers.handlers import router
-from config import TOKEN
+from config import TELEGRAM_BOT_TOKEN
 
-bot = Bot(token=TOKEN)
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
 
