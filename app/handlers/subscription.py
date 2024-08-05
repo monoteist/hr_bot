@@ -6,6 +6,7 @@ from app.database.connect import async_session
 from app.database.models import User
 from app.utils.db import get_user, update_subscription
 from config import YOOKASSA_TEST_TOKEN
+from app.keyboards.subscription import get_subscription_keyboard
 
 router = Router()
 
@@ -47,18 +48,39 @@ async def start_trial(callback_query: types.CallbackQuery):
 
 
 @router.callback_query(F.data == 'buy_subscription')
+async def buy_subscription(callback_query: types.CallbackQuery):
+    await callback_query.message.answer(
+        "Вы можете приобрести подписку в трех вариантах:\n"
+        "1. На 1 месяц: 4 990 рублей\n"
+        "2. На 3 месяца: 11 990 рублей\n"
+        "3. На год: 39 990 рублей\n"
+        "Выберите подходящий вариант:",
+        reply_markup=get_subscription_keyboard()
+    )
+
+
+@router.callback_query(F.data.startswith('subscribe_'))
 async def process_callback_buy_subscribe(callback_query: types.CallbackQuery):
     """
     Обработчик для покупки подписки. Отправляет пользователю счет на оплату.
 
     :param callback_query: Callback query от пользователя.
     """
-    # Цена в копейках (490 рублей)
-    prices = [types.LabeledPrice(label="Месячная подписка", amount=490 * 100)]
+    data = callback_query.data
+    if data == "subscribe_1_month":
+        prices = [types.LabeledPrice(label="Месячная подписка", amount=800 * 100)]
+    elif data == "subscribe_3_months":
+        prices = [types.LabeledPrice(label="Подписка на 3 месяца", amount=900 * 100)]
+    elif data == "subscribe_1_year":
+        prices = [types.LabeledPrice(label="Годовая подписка", amount=990 * 100)]
+    else:
+        await callback_query.answer("Некорректный выбор.")
+        return
+
     await callback_query.message.answer_invoice(
-        title="Подписка на месяц",
-        description="Оплатите месячную подписку",
-        payload="subscription_payload",
+        title="Подписка",
+        description="Оплатите выбранную подписку",
+        payload=f"subscription_payload_{data}",
         provider_token=YOOKASSA_TEST_TOKEN,
         currency="RUB",
         prices=prices,
@@ -86,7 +108,17 @@ async def successful_payment_handler(message: types.Message):
     """
     async with async_session() as session:
         async with session.begin():
-            await update_subscription(session, message.from_user.id, 30)
+            payload = message.successful_payment.invoice_payload
+            if payload == "subscription_payload_subscribe_1_month":
+                days = 30
+            elif payload == "subscription_payload_subscribe_3_months":
+                days = 90
+            elif payload == "subscription_payload_subscribe_1_year":
+                days = 365
+            else:
+                await message.answer("Ошибка при обработке платежа.")
+                return
+            await update_subscription(session, message.from_user.id, days)
     await message.answer(
         f"Поздравляем с приобретением подписки!\n"
         f"Весь функционал вы можете найти в меню бота.\n"
