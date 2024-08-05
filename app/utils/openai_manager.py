@@ -8,7 +8,7 @@ class OpenaiClient:
 
     async def async_get_response(self, messages: list) -> ChatCompletionMessage:
         completion = await self.async_client.chat.completions.create(
-            model='gpt-4o',
+            model='gpt-3.5-turbo',
             messages=messages
         )
         return completion.choices[0].message
