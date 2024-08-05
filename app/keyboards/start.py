@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 
 
 def start_keyboard():
@@ -25,3 +25,16 @@ def start_keyboard():
         ]
     )
     return markup
+
+
+def get_bot_commands():
+    """
+    Возвращает список команд для меню бота.
+    """
+    commands = [
+        BotCommand(command="/input_employees", description="Ввод сотрудников"),
+        BotCommand(command="/recruiting", description="Рекрутинг"),
+        BotCommand(command="/your_assistant", description="Твой помощник"),
+        BotCommand(command="/document_templates", description="Шаблоны документов")
+    ]
+    return commands
