@@ -1,10 +1,10 @@
-import sqlite3
+# import sqlite3
 
-conn = sqlite3.connect('db.sqlite3')
+# conn = sqlite3.connect('app/database/db.sqlite3')
 
-cursor = conn.cursor()
+# cursor = conn.cursor()
 
-cursor.execute('delete from users;')
-conn.commit()
-cursor.close()
-conn.close()
+# cursor.execute('delete from users;')
+# conn.commit()
+# cursor.close()
+# conn.close()
