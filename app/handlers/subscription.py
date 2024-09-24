@@ -26,6 +26,7 @@ async def start_trial(callback_query: types.CallbackQuery):
             if user:
                 if user.has_used_trial:
                     await callback_query.message.answer("Вы уже использовали пробный период.")
+                    await callback_query.answer()
                     return
                 else:
                     user.subscription_end = datetime.utcnow() + timedelta(days=1)
@@ -57,7 +58,7 @@ async def buy_subscription(callback_query: types.CallbackQuery):
         "Выберите подходящий вариант:",
         reply_markup=get_subscription_keyboard()
     )
-
+    await callback_query.answer()
 
 @router.callback_query(F.data.startswith('subscribe_'))
 async def process_callback_buy_subscribe(callback_query: types.CallbackQuery):
