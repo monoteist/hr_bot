@@ -8,6 +8,7 @@ from app.handlers.recruting import router as resume_router
 from app.handlers.start import router as start_router
 from app.handlers.subscription import router as subscription_router
 from app.handlers.adaptation import router as adaptation_router
+from app.handlers.assistant import router as assistant_router
 from config import TELEGRAM_BOT_TOKEN
 from app.keyboards.start import get_bot_commands
 
@@ -21,6 +22,7 @@ async def on_startup():
 
 async def main():
     dp.include_router(resume_router)
+    dp.include_router(assistant_router)
     dp.include_router(start_router)
     dp.include_router(subscription_router)
     dp.include_router(adaptation_router)
