@@ -1,26 +1,19 @@
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters.state import StateFilter
 
 from app.utils.openai_manager import OpenaiClient
 from app.keyboards.recruting import get_recruiting_menu
 from app.utils.validators import text_message_filter
 from app.utils.db import check_subscription
+from app.forms.recruting import VacancyForm
 
 
 from config import OPEN_AI_API_TOKEN
 
 router = Router()
 openai_client = OpenaiClient(api_key=OPEN_AI_API_TOKEN)
-
-
-class VacancyForm(StatesGroup):
-    company_name = State()
-    company_activity = State()
-    job_title = State()
-    job_functionality = State()
 
 
 @router.message(Command("recruiting"))
@@ -80,6 +73,39 @@ async def answer_job_functionality(message: types.Message, state: FSMContext):
 
     await message.answer(response.content)
     await state.clear()
+
+
+
+
+@router.callback_query(F.data == "edit_vacancy")
+async def edit_vacancy_callback(callback_query: types.CallbackQuery, state: FSMContext):
+    await callback_query.answer()
+    user = await check_subscription(callback_query.from_user.id)
+    if user:
+        await callback_query.message.answer("Отправьте текстовым сообщением свою готовую вакансию, а я пришлю вам отредактированную версию.")
+        await state.set_state(VacancyForm.editing_vacancy)
+    else:
+        await callback_query.message.answer("У вас нет активной подписки. Пожалуйста, оформите подписку, чтобы использовать эту функцию.")
+
+
+@router.message(StateFilter(VacancyForm.editing_vacancy), text_message_filter)
+async def edit_vacancy_message(message: types.Message, state: FSMContext):
+    if message.content_type != types.ContentType.TEXT:
+        await message.answer("Пожалуйста, отправьте текстовое сообщение с вашей вакансией.")
+        return
+
+    vacancy_text = message.text
+
+    messages = [
+        {"role": "system", "content": "Вы помощник по редактированию вакансий."},
+        {"role": "user", "content": f"Отредактируй эту вакансию, исправив ошибки и сделай ее более привлекательной:\n\n{vacancy_text}"}
+    ]
+
+    response = await openai_client.async_get_response(messages)
+
+    await message.answer(response.content)
+    await state.clear()
+
 
 
 @router.message(StateFilter(VacancyForm))

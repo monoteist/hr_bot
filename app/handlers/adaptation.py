@@ -1,4 +1,4 @@
-from aiogram.fsm.state import StatesGroup, State
+
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -8,14 +8,11 @@ from aiogram.types import Message
 from app.utils.openai_manager import OpenaiClient
 from app.utils.db import check_subscription
 from app.utils.validators import text_message_filter
+from app.forms.adaptation import AdaptationPlanForm
 from config import OPEN_AI_API_TOKEN
 
 
-class AdaptationPlanForm(StatesGroup):
-    job_title = State()
-    company_name = State()
-    company_activity = State()
-    job_responsibilities = State()
+
 
 
 router = Router()
