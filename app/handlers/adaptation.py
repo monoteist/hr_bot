@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from aiogram.fsm.state import StatesGroup, State
 from aiogram import Router, types
 from aiogram.filters import Command
@@ -9,6 +7,7 @@ from aiogram.types import Message
 
 from app.utils.openai_manager import OpenaiClient
 from app.utils.db import check_subscription
+from app.utils.validators import text_message_filter
 from config import OPEN_AI_API_TOKEN
 
 
@@ -23,7 +22,7 @@ router = Router()
 openai_client = OpenaiClient(api_key=OPEN_AI_API_TOKEN)
 
 
-@router.message(Command("adaptation_plan"))
+@router.message(Command("adaptation_plan"), text_message_filter)
 async def create_adaptation_plan_command(message: Message, state: FSMContext):
     user = await check_subscription(message.from_user.id)
     if user:
@@ -34,41 +33,29 @@ async def create_adaptation_plan_command(message: Message, state: FSMContext):
         await message.answer("У вас нет активной подписки. Пожалуйста, оформите подписку, чтобы использовать эту функцию.")
 
 
-@router.message(StateFilter(AdaptationPlanForm.job_title))
+@router.message(StateFilter(AdaptationPlanForm.job_title), text_message_filter)
 async def answer_job_title(message: Message, state: FSMContext):
-    if message.content_type != types.ContentType.TEXT:
-        await message.answer("Пожалуйста, отправьте текстовый ответ.")
-        return
     await state.update_data(job_title=message.text)
     await message.answer("2. Как называется ваша компания?")
     await state.set_state(AdaptationPlanForm.company_name)
 
 
-@router.message(StateFilter(AdaptationPlanForm.company_name))
+@router.message(StateFilter(AdaptationPlanForm.company_name), text_message_filter)
 async def answer_company_name(message: Message, state: FSMContext):
-    if message.content_type != types.ContentType.TEXT:
-        await message.answer("Пожалуйста, отправьте текстовый ответ.")
-        return
     await state.update_data(company_name=message.text)
     await message.answer("3. Чем занимается ваша компания?")
     await state.set_state(AdaptationPlanForm.company_activity)
 
 
-@router.message(StateFilter(AdaptationPlanForm.company_activity))
+@router.message(StateFilter(AdaptationPlanForm.company_activity), text_message_filter)
 async def answer_company_activity(message: Message, state: FSMContext):
-    if message.content_type != types.ContentType.TEXT:
-        await message.answer("Пожалуйста, отправьте текстовый ответ.")
-        return
     await state.update_data(company_activity=message.text)
     await message.answer("4. Какие обязанности у сотрудника на этой должности?")
     await state.set_state(AdaptationPlanForm.job_responsibilities)
 
 
-@router.message(StateFilter(AdaptationPlanForm.job_responsibilities))
+@router.message(StateFilter(AdaptationPlanForm.job_responsibilities), text_message_filter)
 async def answer_job_responsibilities(message: Message, state: FSMContext):
-    if message.content_type != types.ContentType.TEXT:
-        await message.answer("Пожалуйста, отправьте текстовый ответ.")
-        return
     await state.update_data(job_responsibilities=message.text)
     data = await state.get_data()
 
@@ -85,3 +72,8 @@ async def answer_job_responsibilities(message: Message, state: FSMContext):
 
     await message.answer(response.content)
     await state.clear()
+
+
+@router.message(StateFilter(AdaptationPlanForm))
+async def handle_non_text_message(message: types.Message) -> None:
+    await message.answer("Пожалуйста, отправьте текстовое сообщение.")
