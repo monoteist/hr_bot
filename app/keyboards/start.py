@@ -32,9 +32,8 @@ def get_bot_commands():
     Возвращает список команд для меню бота.
     """
     commands = [
-        BotCommand(command="/input_employees", description="Ввод сотрудников"),
+        BotCommand(command="/adaptation_plan", description="Создать план адаптации"),
         BotCommand(command="/recruiting", description="Рекрутинг"),
         BotCommand(command="/your_assistant", description="Твой помощник"),
-        BotCommand(command="/document_templates", description="Шаблоны документов")
     ]
     return commands

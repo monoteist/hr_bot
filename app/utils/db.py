@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.database.models import User
+from app.database.connect import async_session
 
 
 async def get_user(session: AsyncSession, user_id: int) -> User:
@@ -36,7 +37,8 @@ async def update_subscription(session: AsyncSession, user_id: int, days: int):
         if user.subscription_end and user.subscription_end > current_date:
             # Если у пользователя активная подписка, суммируем оставшиеся дни
             remaining_days = (user.subscription_end - current_date).days
-            user.subscription_end = current_date + timedelta(days=days + remaining_days)
+            user.subscription_end = current_date + \
+                timedelta(days=days + remaining_days)
         else:
             # Если подписки нет или она истекла, устанавливаем новые дни
             user.subscription_end = current_date + timedelta(days=days)
@@ -47,5 +49,21 @@ async def update_subscription(session: AsyncSession, user_id: int, days: int):
             subscription_end=current_date + timedelta(days=days)
         )
         session.add(new_user)
-    
+
     await session.commit()
+
+
+async def check_subscription(user_id: int) -> User:
+    """
+    Проверяет наличие активной подписки у пользователя, открывая сессию базы данных.
+
+    :param user_id: ID пользователя Telegram.
+    :return: Объект пользователя с активной подпиской или None, если подписка отсутствует.
+    """
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(select(User).filter_by(user_id=user_id))
+            user = result.scalars().first()
+
+            if user and user.subscription_end > datetime.utcnow():
+                return user

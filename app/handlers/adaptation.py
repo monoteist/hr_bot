@@ -6,13 +6,10 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.filters.state import StateFilter
 from aiogram.types import Message
-from sqlalchemy.future import select
 
 from app.utils.openai_manager import OpenaiClient
-from app.database.connect import async_session
-from app.database.models import User
+from app.utils.db import check_subscription
 from config import OPEN_AI_API_TOKEN
-
 
 
 class AdaptationPlanForm(StatesGroup):
@@ -26,20 +23,15 @@ router = Router()
 openai_client = OpenaiClient(api_key=OPEN_AI_API_TOKEN)
 
 
-@router.message(Command("input_employees"))
+@router.message(Command("adaptation_plan"))
 async def create_adaptation_plan_command(message: Message, state: FSMContext):
-    # Проверка подписки
-    async with async_session() as session:
-        async with session.begin():
-            result = await session.execute(select(User).filter_by(user_id=message.from_user.id))
-            user = result.scalars().first()
-
-            if user and user.subscription_end > datetime.utcnow():
-                await message.answer("Я задам вам 4 вопроса, после чего пришлю готовый план адаптации.")
-                await message.answer("1. Как называется должность, для которой вы составляете план адаптации?")
-                await state.set_state(AdaptationPlanForm.job_title)
-            else:
-                await message.answer("У вас нет активной подписки. Пожалуйста, оформите подписку, чтобы использовать эту функцию.")
+    user = await check_subscription(message.from_user.id)
+    if user:
+        await message.answer("Я задам вам 4 вопроса, после чего пришлю готовый план адаптации.")
+        await message.answer("1. Как называется должность, для которой вы составляете план адаптации?")
+        await state.set_state(AdaptationPlanForm.job_title)
+    else:
+        await message.answer("У вас нет активной подписки. Пожалуйста, оформите подписку, чтобы использовать эту функцию.")
 
 
 @router.message(StateFilter(AdaptationPlanForm.job_title))
