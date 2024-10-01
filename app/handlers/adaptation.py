@@ -22,7 +22,7 @@ router = Router()
 openai_client = OpenaiClient(api_key=OPEN_AI_API_TOKEN)
 
 
-@router.message(Command("adaptation_plan"), text_message_filter)
+@router.message(Command("adaptation_plan"))
 async def create_adaptation_plan_command(message: Message, state: FSMContext):
     user = await check_subscription(message.from_user.id)
     if user:
