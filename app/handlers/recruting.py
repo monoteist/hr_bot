@@ -7,7 +7,7 @@ from app.utils.openai_manager import OpenaiClient
 from app.keyboards.recruting import get_recruiting_menu
 from app.utils.validators import text_message_filter
 from app.utils.db import check_subscription
-from app.forms.recruting import VacancyForm
+from app.forms.recruting import VacancyForm, InterviewQuestionForm
 
 
 from config import OPEN_AI_API_TOKEN
@@ -75,8 +75,6 @@ async def answer_job_functionality(message: types.Message, state: FSMContext):
     await state.clear()
 
 
-
-
 @router.callback_query(F.data == "edit_vacancy")
 async def edit_vacancy_callback(callback_query: types.CallbackQuery, state: FSMContext):
     await callback_query.answer()
@@ -107,7 +105,64 @@ async def edit_vacancy_message(message: types.Message, state: FSMContext):
     await state.clear()
 
 
-
 @router.message(StateFilter(VacancyForm))
+async def handle_non_text_message(message: types.Message) -> None:
+    await message.answer("Пожалуйста, отправьте текстовое сообщение.")
+
+
+@router.callback_query(F.data == "prepare_interview_questions")
+async def prepare_interview_questions_callback(callback_query: types.CallbackQuery, state: FSMContext):
+    await callback_query.answer()
+    user = await check_subscription(callback_query.from_user.id)
+    if user:
+        await callback_query.message.answer("Я задам вам 4 вопроса, после чего пришлю вопросы, которые проверят навыки и компетенции кандидата на собеседовании.")
+        await callback_query.message.answer("1. Как называется должность?")
+        await state.set_state(InterviewQuestionForm.job_title)
+
+    else:
+        await callback_query.message.answer("У вас нет активной подписки. Пожалуйста, оформите подписку, чтобы использовать эту функцию.")
+
+
+@router.message(StateFilter(InterviewQuestionForm.job_title), text_message_filter)
+async def answer_job_title(message: types.Message, state: FSMContext):
+    await state.update_data(job_title=message.text)
+    await message.answer("2. Какой вид деятельности у вашей компании?")
+    await state.set_state(InterviewQuestionForm.company_activity)
+
+
+@router.message(StateFilter(InterviewQuestionForm.company_activity), text_message_filter)
+async def answer_company_activity(message: types.Message, state: FSMContext):
+    await state.update_data(company_activity=message.text)
+    await message.answer("3. Какие навыки требуются у кандидата?")
+    await state.set_state(InterviewQuestionForm.required_skills)
+
+
+@router.message(StateFilter(InterviewQuestionForm.required_skills), text_message_filter)
+async def answer_required_skills(message: types.Message, state: FSMContext):
+    await state.update_data(required_skills=message.text)
+    await message.answer("4. Опишите вкратце опыт кандидата из резюме.")
+    await state.set_state(InterviewQuestionForm.candidate_experience)
+
+
+@router.message(StateFilter(InterviewQuestionForm.candidate_experience), text_message_filter)
+async def answer_candidate_experience(message: types.Message, state: FSMContext):
+    await state.update_data(candidate_experience=message.text)
+    data = await state.get_data()
+
+    messages = [
+        {"role": "system", "content": "Вы помощник по подготовке вопросов для собеседований."},
+        {"role": "user", "content": f"Составь список вопросов для интервью с кандидатом на должность {data['job_title']}.\n"
+                                    f"Компания-работодатель занимается {data['company_activity']}.\n"
+                                    f"Вопросы должны раскрыть такие навыки кандидата как {data['required_skills']}.\n"
+                                    f"Учитывай опыт кандидата: {data['candidate_experience']}."}
+    ]
+
+    response = await openai_client.async_get_response(messages)
+
+    await message.answer(response.content)
+    await state.clear()
+
+
+@router.message(StateFilter(InterviewQuestionForm))
 async def handle_non_text_message(message: types.Message) -> None:
     await message.answer("Пожалуйста, отправьте текстовое сообщение.")
